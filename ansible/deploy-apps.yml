@@ -1,0 +1,24 @@
+---
+- name: Deploy app 1
+  hosts: all
+  become: true
+  vars:
+    container_action: run
+  tasks:
+
+    - name: Copy a dockerized apps to a remote host
+      copy:
+        src: "./apps/"
+        dest: /tmp/apps
+
+    - name: Find folders within the directory
+      find:
+        paths: /tmp/apps
+        file_type: directory
+      register: folders
+
+
+    - name: Launch docker compose for each of the app in folder
+      community.docker.docker_compose_v2:
+        project_src: "{{ item.path }}"
+      loop: "{{ folders.files }}"

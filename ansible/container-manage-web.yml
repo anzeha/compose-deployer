@@ -1,0 +1,115 @@
+---
+- name: Deploy secured trafeik with whoami test service
+  hosts: all
+  become: true
+  vars:
+    container_action: run
+  tasks:
+
+    - name: Create docker network "{{docker_network_name}}"
+      community.docker.docker_network:
+        name: "{{docker_network_name}}"
+        driver: bridge
+        state: present
+      when: container_action == 'run'
+
+    - name: Delete traefik folder
+      ansible.builtin.file:
+        path: /var/www/traefik/
+        state: absent
+    
+    - name: Delete portainer folder
+      ansible.builtin.file:
+        path: /var/tmp/portainer_data
+        state: absent
+    
+    - name: Create a traefik folder
+      ansible.builtin.file:
+        path: /var/www/traefik
+        state: directory
+        mode: '0755'
+    
+    - name: Create portainer folder
+      ansible.builtin.file:
+        path: /var/tmp/portainer_data
+        state: directory
+        mode: '0755'
+
+    - name: Create trafeik container
+      community.docker.docker_container:
+        name: traefik
+        image: "traefik:v3.0"
+        state: started
+        command:
+          - --log.level=INFO
+          - --log.filepath=/var/log/traefik.log
+          - --accesslog=true
+          #- --accesslog.filepath=/var/log/traefik-access.log
+          - --providers.docker=true
+          - --providers.docker.network={{docker_network_name}}
+          - --providers.docker.exposedByDefault=false
+          - --entrypoints.web.address=:80
+          - --entrypoints.web.http.redirections.entrypoint.to=websecure
+          - --entryPoints.web.http.redirections.entrypoint.scheme=https
+          - --entrypoints.websecure.address=:443
+          # remove next line when using Traefik v2
+          - --entrypoints.websecure.asDefault=true 
+          - --entrypoints.websecure.http.tls.certresolver=myresolver
+          - --certificatesresolvers.myresolver.acme.email=anze603@gmail.com
+          - --certificatesresolvers.myresolver.acme.tlschallenge=true
+          - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
+          - --api.dashboard=true
+          # Uncomment if not in production, creates staging certificates
+          - --certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.mydashboard.rule: "Host(`traefik.{{dynamic_dns_domain}}`)"
+          traefik.http.routers.mydashboard.service: "api@internal"
+          traefik.http.routers.mydashboard.middlewares: "myauth"
+          traefik.http.middlewares.myauth.basicauth.users: "test:$2y$05$a5PyrHZN6SqWT3ajWMRrnOzaMJSS3u9nMzQBKHrJ/AkSFI6srpUx6"
+        ports:
+          - "443:443"
+          - "80:80"
+        volumes:
+          - "/var/www/traefik:/letsencrypt"
+          - "/var/run/docker.sock:/var/run/docker.sock:ro"
+        networks:
+          - name: "{{docker_network_name}}"
+      when: container_action == 'run'
+    
+    - name: Create whoami container
+      community.docker.docker_container:
+        name: my-app
+        image: traefik/whoami:v1.7.1
+        networks:
+          - name: "{{docker_network_name}}"
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.mywhoami.rule: "Host(`whoami.{{dynamic_dns_domain}}`) || Host(`www.whoami.{{dynamic_dns_domain}}`)"
+          traefik.http.services.mywhoami.loadbalancer.server.port: "80"
+          traefik.http.middlewares.mywwwredirect.redirectregex.regex: "^https://www\\.(.*)"
+          traefik.http.middlewares.mywwwredirect.redirectregex.replacement: "https://$${1}"
+          traefik.http.routers.mywhoami.middlewares: "mywwwredirect"
+      when: container_action == 'run'
+
+
+    - name: Create portainer container
+      community.docker.docker_container:
+        name: portainer
+        image: portainer/portainer-ce:latest
+        restart_policy: always
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+          - /var/tmp/portainer_data:/data
+        networks:
+          - name: "{{docker_network_name}}"
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.portainer.rule: "Host(`portainer.{{dynamic_dns_domain}}`)"
+          traefik.http.routers.portainer.entrypoints: "websecure"
+          traefik.http.routers.portainer.tls.certresolver: "letsencrypt"
+          traefik.http.routers.portainer.service: "portainer_svc"
+          traefik.http.services.portainer_svc.loadBalancer.server.port: "9000"
+
+      when: container_action == 'run'
+

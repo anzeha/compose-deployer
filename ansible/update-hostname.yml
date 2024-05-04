@@ -1,0 +1,21 @@
+---
+- name: Associate server IP with freemyip.com domain
+  hosts: all
+  become: true
+  tasks:
+    - name: Update IP with curl request
+      ansible.builtin.uri:
+        url: "{{dynamic_dns_update_url}}"
+        return_content: true
+      register: response
+      failed_when: "'OK' not in response.content"
+
+    - name: Wait for the hostname to respond to ping
+      ansible.builtin.wait_for:
+        host: "{{dynamic_dns_domain}}"
+        port: 22
+        state: started
+      retries: 6
+      delay: 10
+        
+

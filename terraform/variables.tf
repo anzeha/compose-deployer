@@ -48,6 +48,25 @@ variable "ansible_ignore_playbook_failure" {
   type = bool
   default = false
 }
+variable "production" {
+  type = bool
+  description = "If false will use staging server for acme certificate resolver"
+  default = true
+}
+variable "acme_endpoint_production" {
+  type = string
+  default = "https://acme-v02.api.letsencrypt.org/directory"
+}
+variable "acme_endpoint_staging" {
+  type = string
+  default = "https://acme-staging-v02.api.letsencrypt.org/directory"
+}
+variable "traefik_basic_auth_username" {
+  type = string
+}
+variable "traefik_basic_auth_password" {
+  type = string
+}
 
 # DOCKER VARS
 variable "docker_network_name" {

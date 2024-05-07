@@ -59,14 +59,13 @@
           - --certificatesresolvers.myresolver.acme.tlschallenge=true
           - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
           - --api.dashboard=true
-          # Uncomment if not in production, creates staging certificates
-          - --certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+          - --certificatesresolvers.myresolver.acme.caserver={{acme_endpoint}}
         labels:
           traefik.enable: "true"
           traefik.http.routers.mydashboard.rule: "Host(`traefik.{{dynamic_dns_domain}}`)"
           traefik.http.routers.mydashboard.service: "api@internal"
           traefik.http.routers.mydashboard.middlewares: "myauth"
-          traefik.http.middlewares.myauth.basicauth.users: "test:$2y$05$a5PyrHZN6SqWT3ajWMRrnOzaMJSS3u9nMzQBKHrJ/AkSFI6srpUx6"
+          traefik.http.middlewares.myauth.basicauth.users: "{{basic_auth_user_pass}}"
         ports:
           - "443:443"
           - "80:80"

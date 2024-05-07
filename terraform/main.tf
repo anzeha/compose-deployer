@@ -8,7 +8,15 @@ terraform {
       version = "~> 1.2.0"
       source  = "ansible/ansible"
     }
+    htpasswd = {
+      version = "~> 1.2.1"
+      source = "loafoe/htpasswd"
+    }
+
   }
+}
+    
+provider "htpasswd" {
 }
 
 # Configure the DigitalOcean Provider
@@ -51,6 +59,11 @@ resource "digitalocean_project" "project" {
 # }
 
 
+resource "htpasswd_password" "hash" {
+  password = var.traefik_basic_auth_password
+}
+
+
 resource "ansible_playbook" "playbook" {
   playbook                = "../ansible/main.yml"
   name                    = digitalocean_droplet.vps.ipv4_address
@@ -68,5 +81,9 @@ resource "ansible_playbook" "playbook" {
     docker_network_name = var.docker_network_name
     dynamic_dns_domain = var.dynamic_dns_domain
     dynamic_dns_update_url = var.dynamic_dns_update_url
+    production = var.production
+    acme_endpoint = var.production ? var.acme_endpoint_production : var.acme_endpoint_staging
+    basic_auth_user_pass = "${var.traefik_basic_auth_username}:${htpasswd_password.hash.bcrypt}"
+
   }
 }

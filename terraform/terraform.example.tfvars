@@ -1,0 +1,5 @@
+digital_ocean_token = "..."
+dynamic_dns_domain = "..."
+dynamic_dns_update_url = "..."
+traefik_basic_auth_username = "..."
+traefik_basic_auth_password = "..."

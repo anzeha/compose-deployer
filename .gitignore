@@ -1,6 +1,7 @@
 terraform/keys/*
 .vscode
 apps/app1
+apps/app3
 terraform/.terraform
 
 # Local .terraform directories

@@ -7,5 +7,5 @@
 - name: Include a play after another play
   ansible.builtin.import_playbook: container-manage-web.yml
 
-# - name: Include a play after another play
-#   ansible.builtin.import_playbook: deploy-apps.yml
+- name: Include a play after another play
+  ansible.builtin.import_playbook: deploy-apps.yml

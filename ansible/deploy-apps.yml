@@ -8,7 +8,7 @@
 
     - name: Copy a dockerized apps to a remote host
       copy:
-        src: "./apps/"
+        src: "../apps/"
         dest: /tmp/apps
 
     - name: Find folders within the directory
